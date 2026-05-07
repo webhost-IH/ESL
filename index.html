@@ -325,7 +325,7 @@ input[type=range]{width:90px;accent-color:var(--primary)}
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="topbar-title">
-    🌈 英文樂園
+    🌈 <span data-i18n="app_title">英文樂園</span>
     <span class="topbar-sub" id="topSub"></span>
   </div>
   <div class="streak-pill" onclick="showPage('progressPage')" id="streakPill">
@@ -372,7 +372,7 @@ input[type=range]{width:90px;accent-color:var(--primary)}
 <div class="page" id="setupPage">
   <div class="setup-scroll">
     <div class="setup-hero" style="animation-delay:.05s">
-      <h1>🌈 英文樂園</h1>
+      <h1>🌈 <span data-i18n="app_title">英文樂園</span></h1>
       <p data-i18n="subtitle">台灣108課綱 · 1,200篇英文文章 · 快樂學習！</p>
     </div>
     <div class="setup-card" style="animation-delay:.1s">
@@ -444,7 +444,6 @@ input[type=range]{width:90px;accent-color:var(--primary)}
         <button class="aud-btn aud-play" id="playBtn" onclick="playArt()" data-i18n="btn_read">▶️ 跟讀</button>
         <button class="aud-btn aud-slow" id="slowBtn" onclick="playArt(0.55)" data-i18n="btn_slow">🐢 慢速</button>
         <button class="aud-btn aud-stop" id="stopBtn" onclick="stopSpeak()" disabled data-i18n="btn_stop">⏹ 停止</button>
-        <span class="spk-badge hidden" id="spkBadge"><span class="spk-dot"></span><span id="playingLabel">播放中</span></span>
       </div>
       <div class="vol-row">
         🔊 <span data-i18n="volume">音量</span> <input type="range" id="vol" min="0" max="1" step="0.1" value="1">
@@ -819,7 +818,14 @@ function renderArticle() {
   document.getElementById('artWc').textContent = t('word_count',{n:wc});
   
   document.getElementById('artEn').innerHTML = highlightWords(art.en, art.vocab || []);
-  document.getElementById('artZh').textContent = art.zh;
+  const zhEl = document.getElementById('artZh');
+  if (_lang === 'zh-TW' || _lang === 'zh-CN') {
+    zhEl.textContent = art.zh;
+    zhEl.style.display = '';
+  } else {
+    zhEl.textContent = '';
+    zhEl.style.display = 'none';
+  }
   injectTooltips();
   renderVocab();
   updateNavBtns();
@@ -2931,7 +2937,6 @@ async function playArt(rate = 0.95) {
 
   // Setup UI state
   document.getElementById('stopBtn').disabled = false;
-  document.getElementById('spkBadge').classList.remove('hidden');
   document.getElementById('playBtn').disabled = true;
   document.getElementById('slowBtn').disabled = true;
   const wrap = document.getElementById('readProgressWrap');
@@ -3048,7 +3053,6 @@ async function stopSpeak() {
 
 function resetAudio() {
   document.getElementById('stopBtn').disabled=true;
-  document.getElementById('spkBadge').classList.add('hidden');
   document.getElementById('playBtn').disabled=false;
   document.getElementById('slowBtn').disabled=false;
 }
@@ -3097,6 +3101,7 @@ const STRINGS = {
     sem_f:'上',sem_s:'下',grade_names:['','一','二','三','四','五','六'],
     top_grade:'{g}年級{s}學期',history_grade:'{g}年{s}',
     cancel:'取消',confirm:'確定',playing:'播放中',
+    app_title:'英文樂園',
     lang_name:'繁體中文',flag:'🇹🇼'
   },
   'zh-CN':{
@@ -3131,6 +3136,7 @@ const STRINGS = {
     sem_f:'上',sem_s:'下',grade_names:['','一','二','三','四','五','六'],
     top_grade:'{g}年级{s}学期',history_grade:'{g}年{s}',
     cancel:'取消',confirm:'确定',playing:'播放中',
+    app_title:'英文乐园',
     lang_name:'简体中文',flag:'🇨🇳'
   },
   'en':{
@@ -3166,6 +3172,7 @@ const STRINGS = {
     sem_f:'S1',sem_s:'S2',grade_names:['','G1','G2','G3','G4','G5','G6'],
     top_grade:'Grade {g} · Sem {s}',history_grade:'G{g}S{s}',
     cancel:'Cancel',confirm:'OK',playing:'Playing',
+    app_title:'English Paradise',
     lang_name:'English',flag:'🇺🇸'
   },
   'ja':{
@@ -3200,6 +3207,7 @@ const STRINGS = {
     sem_f:'前',sem_s:'後',grade_names:['','1年','2年','3年','4年','5年','6年'],
     top_grade:'{g}生 {s}期',history_grade:'{g}{s}',
     cancel:'キャンセル',confirm:'OK',playing:'再生中',
+    app_title:'英語楽園',
     lang_name:'日本語',flag:'🇯🇵'
   },
   'ko':{
@@ -3234,6 +3242,7 @@ const STRINGS = {
     sem_f:'1',sem_s:'2',grade_names:['','1','2','3','4','5','6'],
     top_grade:'{g}학년 {s}학기',history_grade:'{g}학년{s}학기',
     cancel:'취소',confirm:'확인',playing:'재생 중',
+    app_title:'영어 낙원',
     lang_name:'한국어',flag:'🇰🇷'
   },
   'vi':{
@@ -3268,6 +3277,7 @@ const STRINGS = {
     sem_f:'1',sem_s:'2',grade_names:['','L1','L2','L3','L4','L5','L6'],
     top_grade:'Lớp {g} · HK{s}',history_grade:'L{g}HK{s}',
     cancel:'Hủy',confirm:'OK',playing:'Đang phát',
+    app_title:'Thiên Đường Tiếng Anh',
     lang_name:'Tiếng Việt',flag:'🇻🇳'
   },
   'es':{
@@ -3302,6 +3312,7 @@ const STRINGS = {
     sem_f:'1',sem_s:'2',grade_names:['','G1','G2','G3','G4','G5','G6'],
     top_grade:'Grado {g} · Sem {s}',history_grade:'G{g}S{s}',
     cancel:'Cancelar',confirm:'Aceptar',playing:'Reproduciendo',
+    app_title:'Paraíso del Inglés',
     lang_name:'Español',flag:'🇪🇸'
   },
   'th':{
@@ -3336,6 +3347,7 @@ const STRINGS = {
     sem_f:'1',sem_s:'2',grade_names:['','ป1','ป2','ป3','ป4','ป5','ป6'],
     top_grade:'ป.{g} ภาค{s}',history_grade:'ป{g}ภ{s}',
     cancel:'ยกเลิก',confirm:'ตกลง',playing:'กำลังเล่น',
+    app_title:'สวรรค์ภาษาอังกฤษ',
     lang_name:'ภาษาไทย',flag:'🇹🇭'
   }
 };
