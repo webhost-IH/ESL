@@ -846,7 +846,7 @@ function renderArticle() {
     const _artSnapshot = art;
     const _langSnapshot = _lang;
     zhEl.textContent = '⏳ ...';
-    translateText(art.en, _lang).then(result => {
+    translateLong(art.en, _lang).then(result => {
       if (_lang === _langSnapshot && art === _artSnapshot) {
         zhEl.textContent = result || art.zh;
       }
@@ -1004,6 +1004,26 @@ async function translateText(text, targetLang) {
     if (result) _transCache[cacheKey] = result;
     return result;
   } catch(e) { return ''; }
+}
+
+async function translateLong(text, targetLang) {
+  if (!text) return '';
+  if (text.length <= 450) return translateText(text, targetLang);
+  // Split into sentences, then group into chunks ≤ 450 chars
+  const sentences = text.match(/[^.!?]+[.!?]+\s*/g) || [text];
+  const chunks = [];
+  let current = '';
+  for (const s of sentences) {
+    if ((current + s).length > 450) {
+      if (current) chunks.push(current.trim());
+      current = s;
+    } else {
+      current += s;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  const parts = await Promise.all(chunks.map(c => translateText(c, targetLang)));
+  return parts.join(' ');
 }
 
 const DICT = {
