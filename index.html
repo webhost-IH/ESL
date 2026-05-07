@@ -2,9 +2,9 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>英文樂園 🌈</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet">
+<link href="fonts/fonts.css" rel="stylesheet">
 <style>
 :root{
   --primary:#2196F3;--primary-dark:#1565C0;--primary-light:#E3F2FD;
@@ -29,7 +29,8 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);
 /* ── TOP BAR ── */
 .topbar{
   background:linear-gradient(135deg,var(--primary-dark),var(--primary));
-  padding:12px 16px;display:flex;align-items:center;gap:10px;
+  padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));
+  display:flex;align-items:center;gap:10px;
   position:sticky;top:0;z-index:100;
   box-shadow:0 2px 12px rgba(21,101,192,0.3)
 }
@@ -302,11 +303,21 @@ input[type=range]{width:90px;accent-color:var(--primary)}
   border:5px solid transparent;border-top-color:#1A237E;
 }
 .word-span:hover .word-tip{display:block}
+.word-span.tip-show .word-tip{display:block}
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(33,150,243,.3);border-radius:4px}
+
+.lang-opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;
+  border:2px solid rgba(33,150,243,.2);cursor:pointer;font-family:'Nunito',sans-serif;
+  font-weight:800;font-size:.9rem;color:#1A237E;transition:all .15s}
+.lang-opt:hover{background:var(--primary-light);border-color:var(--primary)}
+.lang-opt.active{background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff;border-color:var(--primary-dark)}
+.lang-flag{font-size:1.3rem}
+
 </style>
 </head>
 <body>
@@ -319,8 +330,9 @@ input[type=range]{width:90px;accent-color:var(--primary)}
   </div>
   <div class="streak-pill" onclick="showPage('progressPage')" id="streakPill">
     <span class="fire">🔥</span>
-    <span id="streakCount">0</span>天
+    <span id="streakCount">0</span><span id="streakDaysLabel">天</span>
   </div>
+  <button class="menu-btn" onclick="openLangPicker()" title="Language">🌐</button>
   <button class="menu-btn" onclick="toggleMenu()">⋮</button>
 </div>
 
@@ -328,16 +340,16 @@ input[type=range]{width:90px;accent-color:var(--primary)}
 <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()">
   <div class="menu-panel" onclick="event.stopPropagation()">
     <div class="menu-item" onclick="menuAction('home')">
-      <span class="mi-icon">🏠</span> 回主頁繼續學習
+      <span class="mi-icon">🏠</span> <span data-i18n="menu_home">回主頁繼續學習</span>
     </div>
     <div class="menu-item" onclick="menuAction('progress')">
-      <span class="mi-icon">📊</span> 學習進度紀錄
+      <span class="mi-icon">📊</span> <span data-i18n="menu_progress">學習進度紀錄</span>
     </div>
     <div class="menu-item" onclick="menuAction('reset')">
-      <span class="mi-icon">🔄</span> 重新選擇年級學期
+      <span class="mi-icon">🔄</span> <span data-i18n="menu_reset">重新選擇年級學期</span>
     </div>
     <div class="menu-item danger" onclick="menuAction('clearAll')">
-      <span class="mi-icon">🗑️</span> 清除所有紀錄
+      <span class="mi-icon">🗑️</span> <span data-i18n="menu_clear">清除所有紀錄</span>
     </div>
   </div>
 </div>
@@ -345,33 +357,44 @@ input[type=range]{width:90px;accent-color:var(--primary)}
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- CUSTOM CONFIRM MODAL -->
+<div id="confirmOverlay" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:18px;padding:24px 20px;margin:16px;max-width:320px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.25)">
+    <div id="confirmMsg" style="font-family:'Nunito',sans-serif;font-weight:700;font-size:.95rem;color:#1A237E;margin-bottom:20px;text-align:center;line-height:1.6"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="_confirmCb(false)" style="flex:1;padding:12px;border:2px solid #e0e0e0;border-radius:12px;background:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:.9rem;color:#78909C;cursor:pointer" data-i18n="cancel">取消</button>
+      <button onclick="_confirmCb(true)" style="flex:1;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#E53935,#8D0000);font-family:'Nunito',sans-serif;font-weight:800;font-size:.9rem;color:#fff;cursor:pointer" data-i18n="confirm">確定</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ SETUP PAGE ═══ -->
 <div class="page" id="setupPage">
   <div class="setup-scroll">
     <div class="setup-hero" style="animation-delay:.05s">
       <h1>🌈 英文樂園</h1>
-      <p>台灣108課綱 · 1,200篇英文文章 · 快樂學習！</p>
+      <p data-i18n="subtitle">台灣108課綱 · 1,200篇英文文章 · 快樂學習！</p>
     </div>
     <div class="setup-card" style="animation-delay:.1s">
-      <div class="setup-ttl">🏫 選擇年級</div>
+      <div class="setup-ttl">🏫 <span data-i18n="select_grade">選擇年級</span></div>
       <div class="grade-grid">
-        <button class="g-btn" onclick="pickGrade(1)">一年級<small>啟蒙 ~10字</small></button>
-        <button class="g-btn" onclick="pickGrade(2)">二年級<small>啟蒙 ~20字</small></button>
-        <button class="g-btn" onclick="pickGrade(3)">三年級<small>正式 ~40字</small></button>
-        <button class="g-btn" onclick="pickGrade(4)">四年級<small>中年 ~60字</small></button>
-        <button class="g-btn" onclick="pickGrade(5)">五年級<small>高年 ~80字</small></button>
-        <button class="g-btn" onclick="pickGrade(6)">六年級<small>高年 ~100字</small></button>
+        <button class="g-btn" onclick="pickGrade(1)"><span data-i18n="grade1">一年級</span><small data-i18n="grade1sub">啟蒙 ~10字</small></button>
+        <button class="g-btn" onclick="pickGrade(2)"><span data-i18n="grade2">二年級</span><small data-i18n="grade2sub">啟蒙 ~20字</small></button>
+        <button class="g-btn" onclick="pickGrade(3)"><span data-i18n="grade3">三年級</span><small data-i18n="grade3sub">正式 ~40字</small></button>
+        <button class="g-btn" onclick="pickGrade(4)"><span data-i18n="grade4">四年級</span><small data-i18n="grade4sub">中年 ~60字</small></button>
+        <button class="g-btn" onclick="pickGrade(5)"><span data-i18n="grade5">五年級</span><small data-i18n="grade5sub">高年 ~80字</small></button>
+        <button class="g-btn" onclick="pickGrade(6)"><span data-i18n="grade6">六年級</span><small data-i18n="grade6sub">高年 ~100字</small></button>
       </div>
     </div>
     <div class="setup-card" style="animation-delay:.15s">
-      <div class="setup-ttl">📅 選擇學期</div>
+      <div class="setup-ttl">📅 <span data-i18n="select_sem">選擇學期</span></div>
       <div class="sem-grid">
-        <button class="s-btn" onclick="pickSem(1)">🌸 上學期</button>
-        <button class="s-btn" onclick="pickSem(2)">🌻 下學期</button>
+        <button class="s-btn" onclick="pickSem(1)" data-i18n="sem1">🌸 上學期</button>
+        <button class="s-btn" onclick="pickSem(2)" data-i18n="sem2">🌻 下學期</button>
       </div>
     </div>
     <div class="setup-card" style="animation-delay:.2s">
-      <button class="go-btn" id="goBtn" onclick="goLearn()" disabled>✨ 開始學習！</button>
+      <button class="go-btn" id="goBtn" onclick="goLearn()" disabled data-i18n="start">✨ 開始學習！</button>
     </div>
   </div>
 </div>
@@ -381,7 +404,7 @@ input[type=range]{width:90px;accent-color:var(--primary)}
   <div class="learn-scroll" id="learnScroll">
     <!-- article selector -->
     <div class="article-bar">
-      <label>📄 選文章</label>
+      <label>📄 <span data-i18n="select_article">選文章</span></label>
       <select class="article-select" id="articleSel" onchange="onArticleChange()"></select>
       <div class="art-nav">
         <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled>◀</button>
@@ -390,7 +413,7 @@ input[type=range]{width:90px;accent-color:var(--primary)}
     </div>
     <!-- vocab strip -->
     <div class="vocab-strip">
-      <div class="vocab-strip-ttl">📝 本課核心單字（點擊聽發音）</div>
+      <div class="vocab-strip-ttl" data-i18n="vocab_title">📝 本課核心單字（點擊聽發音）</div>
       <div class="vocab-chips" id="vocabChips"></div>
     </div>
     <!-- article -->
@@ -411,25 +434,25 @@ input[type=range]{width:90px;accent-color:var(--primary)}
       <!-- reading progress bar -->
       <div id="readProgressWrap" style="display:none;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;font-size:.72rem;font-weight:800;color:var(--muted);margin-bottom:4px">
-          <span>🎯 跟讀進度</span><span id="readPct">0%</span>
+          <span>🎯 <span data-i18n="read_progress">跟讀進度</span></span><span id="readPct">0%</span>
         </div>
         <div style="background:#F0F7FF;border-radius:50px;height:8px;overflow:hidden">
           <div id="readBar" style="height:100%;width:0%;background:linear-gradient(90deg,#43A047,#66BB6A);border-radius:50px;transition:width .3s"></div>
         </div>
       </div>
       <div class="audio-row">
-        <button class="aud-btn aud-play" id="playBtn" onclick="playArt()">▶️ 跟讀</button>
-        <button class="aud-btn aud-slow" id="slowBtn" onclick="playArt(0.55)">🐢 慢速</button>
-        <button class="aud-btn aud-stop" id="stopBtn" onclick="stopSpeak()" disabled>⏹ 停止</button>
-        <span class="spk-badge hidden" id="spkBadge"><span class="spk-dot"></span>播放中</span>
+        <button class="aud-btn aud-play" id="playBtn" onclick="playArt()" data-i18n="btn_read">▶️ 跟讀</button>
+        <button class="aud-btn aud-slow" id="slowBtn" onclick="playArt(0.55)" data-i18n="btn_slow">🐢 慢速</button>
+        <button class="aud-btn aud-stop" id="stopBtn" onclick="stopSpeak()" disabled data-i18n="btn_stop">⏹ 停止</button>
+        <span class="spk-badge hidden" id="spkBadge"><span class="spk-dot"></span><span id="playingLabel">播放中</span></span>
       </div>
       <div class="vol-row">
-        🔊 音量 <input type="range" id="vol" min="0" max="1" step="0.1" value="1">
+        🔊 <span data-i18n="volume">音量</span> <input type="range" id="vol" min="0" max="1" step="0.1" value="1">
         <span id="volPct" style="font-size:.72rem">100%</span>
       </div>
     </div>
     <!-- done button -->
-    <button class="done-btn" onclick="markDone()">✅ 完成這篇，繼續下一篇！</button>
+    <button class="done-btn" onclick="markDone()" data-i18n="btn_done">✅ 完成這篇，繼續下一篇！</button>
   </div>
 </div>
 
@@ -440,7 +463,7 @@ input[type=range]{width:90px;accent-color:var(--primary)}
     <div class="streak-hero">
       <div class="streak-fire">🔥</div>
       <div class="streak-number" id="bigStreak">0</div>
-      <div class="streak-label">連續學習天數</div>
+      <div class="streak-label" data-i18n="streak_label">連續學習天數</div>
       <div class="streak-best" id="bestStreak">最高紀錄：0 天</div>
     </div>
     <!-- stats -->
@@ -448,32 +471,32 @@ input[type=range]{width:90px;accent-color:var(--primary)}
       <div class="stat-card">
         <div class="stat-icon">📖</div>
         <div class="stat-val" id="statArticles">0</div>
-        <div class="stat-lbl">完成篇數</div>
+        <div class="stat-lbl" data-i18n="stat_articles">完成篇數</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">📅</div>
         <div class="stat-val" id="statDays">0</div>
-        <div class="stat-lbl">學習天數</div>
+        <div class="stat-lbl" data-i18n="stat_days">學習天數</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">🏆</div>
         <div class="stat-val" id="statLessons">0</div>
-        <div class="stat-lbl">完成課次</div>
+        <div class="stat-lbl" data-i18n="stat_lessons">完成課次</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">⭐</div>
         <div class="stat-val" id="statGrade">—</div>
-        <div class="stat-lbl">目前年級</div>
+        <div class="stat-lbl" data-i18n="stat_grade">目前年級</div>
       </div>
     </div>
     <!-- calendar -->
     <div class="calendar-card">
-      <div class="cal-ttl">📆 本月學習日曆</div>
+      <div class="cal-ttl">📆 <span data-i18n="cal_title">本月學習日曆</span></div>
       <div class="cal-grid" id="calGrid"></div>
     </div>
     <!-- history -->
     <div class="history-card">
-      <div class="history-ttl">📋 最近完成記錄</div>
+      <div class="history-ttl" data-i18n="history_title">📋 最近完成記錄</div>
       <div id="historyList"></div>
     </div>
   </div>
@@ -582,13 +605,14 @@ function menuAction(act) {
   else if (act === 'progress') { showPage('progressPage'); }
   else if (act === 'reset') { showPage('setupPage'); }
   else if (act === 'clearAll') {
-    if (confirm('確定要清除所有學習紀錄嗎？')) {
+    customConfirm(t('clear_confirm'), (ok) => {
+      if (!ok) return;
       state = defaultState();
       saveState(state);
-      showToast('已清除所有紀錄');
+      showToast(t('cleared'));
       showPage('setupPage');
       updateTopBar();
-    }
+    });
   }
 }
 
@@ -600,6 +624,33 @@ function showToast(msg, dur=2200) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), dur);
 }
+
+let _confirmCbFn = null;
+function _confirmCb(ok) {
+  const ov = document.getElementById('confirmOverlay');
+  ov.style.display = 'none';
+  if (_confirmCbFn) { _confirmCbFn(ok); _confirmCbFn = null; }
+}
+function customConfirm(msg, cb) {
+  _confirmCbFn = cb;
+  document.getElementById('confirmMsg').textContent = msg;
+  const ov = document.getElementById('confirmOverlay');
+  ov.style.display = 'flex';
+}
+
+// Touch tooltip: tap word to show/hide translation on touch devices
+let _tipVisible = null;
+document.addEventListener('touchstart', function(e) {
+  const ws = e.target.closest('.word-span');
+  if (ws) {
+    e.preventDefault();
+    if (_tipVisible && _tipVisible !== ws) _tipVisible.classList.remove('tip-show');
+    ws.classList.toggle('tip-show');
+    _tipVisible = ws.classList.contains('tip-show') ? ws : null;
+  } else {
+    if (_tipVisible) { _tipVisible.classList.remove('tip-show'); _tipVisible = null; }
+  }
+}, {passive: false});
 
 // ═══════════════════════════════════════════════════════
 // SETUP PAGE
@@ -686,15 +737,15 @@ function onArticleChange() {
 function navigate(dir) {
   const articles = getCurrentData();
   let ai = state.articleIdx + dir;
-  if (ai < 0) { showToast('已經是第一篇了 📖'); return; }
-  if (ai >= articles.length) { showToast('已經是最後一篇了 🎉！'); return; }
+  if (ai < 0) { showToast(t('first_article')); return; }
+  if (ai >= articles.length) { showToast(t('last_article')); return; }
   state.articleIdx = ai;
   saveState(state);
   stopSpeak();
   document.getElementById('articleSel').value = ai;
   renderArticle();
   updateNavBtns();
-  window.scrollTo({top: 0, behavior: 'smooth'});
+  try { window.scrollTo({top: 0, behavior: 'smooth'}); } catch(e) { window.scrollTo(0, 0); }
 }
 
 function updateNavBtns() {
@@ -747,14 +798,18 @@ function highlightWords(text, vocabWords) {
 
 
 function renderArticle() {
+  // 只重置 UI 狀態，不呼叫 stopSpeak（避免重複 cancel 導致 Android 卡死）
+  resetAudio();
+  const wrap = document.getElementById('readProgressWrap');
+  if (wrap) wrap.style.display = 'none';
   const articles = getCurrentData();
   const art = articles[state.articleIdx];
-  
-  document.getElementById('artNum').textContent = `第 ${state.articleIdx + 1} 篇 / 共 100 篇`;
+
+  document.getElementById('artNum').textContent = t('article_num',{cur:state.articleIdx+1,total:100});
   document.getElementById('artTitle').textContent = art.title;
   
   const wc = countWords(art.en);
-  document.getElementById('artWc').textContent = `${wc} 個英文字`;
+  document.getElementById('artWc').textContent = t('word_count',{n:wc});
   
   document.getElementById('artEn').innerHTML = highlightWords(art.en, art.vocab || []);
   document.getElementById('artZh').textContent = art.zh;
@@ -765,13 +820,14 @@ function renderArticle() {
 
 function updateTopBar() {
   if (state.grade && state.sem) {
-    const gNames = ['','一','二','三','四','五','六'];
-    const sName = state.sem===1?'上':'下';
-    document.getElementById('topSub').textContent = `${gNames[state.grade]}年級${sName}學期`;
+    const gNames = t('grade_names');
+    const sName = state.sem===1?t('sem_f'):t('sem_s');
+    document.getElementById('topSub').textContent = t('top_grade',{g:gNames[state.grade],s:sName});
   } else {
     document.getElementById('topSub').textContent = '';
   }
   document.getElementById('streakCount').textContent = state.currentStreak;
+  const _sdl=document.getElementById('streakDaysLabel'); if(_sdl) _sdl.textContent=t('streak_days');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -799,9 +855,10 @@ function markDone() {
   
   saveState(state);
   document.getElementById('streakCount').textContent = state.currentStreak;
+  const _sdl=document.getElementById('streakDaysLabel'); if(_sdl) _sdl.textContent=t('streak_days');
   
   // auto-advance
-  showToast(`✅ 完成！🔥 連勝 ${state.currentStreak} 天！`);
+  showToast(t('done_toast',{n:state.currentStreak}));
   setTimeout(() => navigate(1), 400);
 }
 
@@ -810,7 +867,7 @@ function markDone() {
 // ═══════════════════════════════════════════════════════
 function renderProgress() {
   document.getElementById('bigStreak').textContent = state.currentStreak;
-  document.getElementById('bestStreak').textContent = `最高紀錄：${state.bestStreak} 天`;
+  document.getElementById('bestStreak').textContent = t('best_streak',{n:state.bestStreak});
   document.getElementById('statArticles').textContent = state.completedArticles.length;
   document.getElementById('statDays').textContent = new Set(state.loginDates).size;
   
@@ -818,8 +875,7 @@ function renderProgress() {
   const lessonSet = new Set(state.completedArticles.map(c=>`${c.grade}-${c.sem}-${c.lessonName}`));
   document.getElementById('statLessons').textContent = lessonSet.size;
   
-  const gNames = ['','一','二','三','四','五','六'];
-  document.getElementById('statGrade').textContent = state.grade ? `${gNames[state.grade]}年` : '—';
+  document.getElementById('statGrade').textContent = state.grade ? t('grade_names')[state.grade] : '—';
   
   // calendar
   renderCalendar();
@@ -871,7 +927,7 @@ function renderHistory() {
     return;
   }
   
-  const gNames = ['','一','二','三','四','五','六'];
+  const gNames = t('grade_names');
   list.innerHTML = recent.map(c => `
     <div class="history-item">
       <div class="h-emoji">📖</div>
@@ -879,7 +935,7 @@ function renderHistory() {
         <div class="h-title">${c.title}</div>
         <div class="h-meta">${c.lessonName} · ${c.date}</div>
       </div>
-      <div class="h-badge">${gNames[c.grade]}年${c.sem===1?'上':'下'}</div>
+      <div class="h-badge">${t('history_grade',{g:gNames[c.grade],s:c.sem===1?t('sem_f'):t('sem_s')})}</div>
     </div>
   `).join('');
 }
@@ -2755,16 +2811,35 @@ function injectTooltips() {
 }
 
 
-function speakWord(w) {
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(w);
-  u.lang='en-US'; u.rate=0.8;
-  u.volume = parseFloat(document.getElementById('vol').value);
-  window.speechSynthesis.speak(u);
+async function speakWord(w) {
+  try {
+    const vol = parseFloat(document.getElementById('vol').value);
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.TextToSpeech) {
+      await window.Capacitor.Plugins.TextToSpeech.stop();
+      await window.Capacitor.Plugins.TextToSpeech.speak({
+        text: w,
+        lang: 'en-US',
+        rate: 0.8,
+        volume: vol,
+        category: 'ambient'
+      });
+    } else {
+      // Fallback to Web Speech API if plugin not available
+      const tts = window.speechSynthesis;
+      if (!tts) { showToast(t('no_tts')); return; }
+      tts.cancel();
+      const u = new SpeechSynthesisUtterance(w);
+      u.lang='en-US'; u.rate=0.8; u.volume = vol;
+      setTimeout(() => { try { tts.speak(u); } catch(e){} }, 50);
+    }
+  } catch(e) {
+    console.error('TTS Error:', e);
+    showToast(t('tts_failed'));
+  }
 }
 
 // ── Word-by-word highlight using onboundary (真正同步) ──
-let _hlTimer = null;
+let _hlTimers = [];
 
 function buildWordSpans(text, vocabWords) {
   // Split into real word-tokens vs punctuation/symbols
@@ -2789,7 +2864,7 @@ function buildWordSpans(text, vocabWords) {
     }
     const clean = tok.text.replace(/[^a-zA-Z]/g, '').toLowerCase();
     const isVocab = vocabWords.some(v => v.toLowerCase() === clean);
-    const safeWord = tok.text.replace(/'/g, "\'");
+    const safeWord = tok.text.replace(/'/g, "\\'");
     if (isVocab) {
       html += `<span class="hw word-span" id="ws-${wordIdx}" data-word="${clean}" onclick="speakWord('${safeWord}')">${tok.text}</span>`;
     } else {
@@ -2824,78 +2899,140 @@ function setHighlight(wordIdx) {
   }
 }
 
-function playArt(rate = 0.95) {
+async function playArt(rate = 0.95) {
+  const isPlugin = !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.TextToSpeech);
+  const tts = window.speechSynthesis;
+
+  if (!isPlugin && !tts) {
+    showToast(t('no_tts2'));
+    return;
+  }
+
   stopSpeak();
 
   const artList = getCurrentData();
   const art     = artList[state.articleIdx];
   const text    = art.en;
 
-  // 1. Render word spans immediately (all visible at once)
+  // 1. Render word spans immediately
   const { html, wordCount } = buildWordSpans(text, art.vocab || []);
   document.getElementById('artEn').innerHTML = html;
   injectTooltips();
 
-  // 2. Build char→word index map for onboundary sync
   const charMap = buildCharMap(text);
+  const vol = parseFloat(document.getElementById('vol').value);
 
-  // 3. Prepare utterance
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang   = 'en-US';
-  u.rate   = rate;
-  u.volume = parseFloat(document.getElementById('vol').value);
+  // Setup UI state
+  document.getElementById('stopBtn').disabled = false;
+  document.getElementById('spkBadge').classList.remove('hidden');
+  document.getElementById('playBtn').disabled = true;
+  document.getElementById('slowBtn').disabled = true;
+  const wrap = document.getElementById('readProgressWrap');
+  if (wrap) wrap.style.display = 'block';
+  const bar = document.getElementById('readBar');
+  if (bar) bar.style.width = '0%';
 
-  // 4. onboundary fires at the exact character position being spoken
-  u.onboundary = (e) => {
-    if (e.name !== 'word') return;
-    const wi = charMap[e.charIndex];
-    if (wi !== undefined) {
-      setHighlight(wi);
-      // Update progress bar
-      const pct = Math.round(((wi + 1) / wordCount) * 100);
-      const bar   = document.getElementById('readBar');
-      const pctEl = document.getElementById('readPct');
-      if (bar)   bar.style.width = pct + '%';
-      if (pctEl) pctEl.textContent = pct + '%';
-    }
-  };
+  if (isPlugin) {
+    // Plugin mode
+    try {
+      // The plugin version 5 doesn't easily support word-by-word highlights via callbacks in the same way u.onboundary does
+      // We will use estimated timing for the highlight progress
+      const words = Object.values(charMap).sort((a,b)=>a-b);
+      // Estimate timing: average word length + spaces
+      const totalMs = (text.split(/\s+/).length / rate) * 60 * 1000 / 150;
+      const msPerWord = totalMs / (words.length || 1);
 
-  u.onstart = () => {
-    document.getElementById('stopBtn').disabled = false;
-    document.getElementById('spkBadge').classList.remove('hidden');
-    document.getElementById('playBtn').disabled = true;
-    document.getElementById('slowBtn').disabled = true;
-    const wrap = document.getElementById('readProgressWrap');
-    if (wrap) wrap.style.display = 'block';
-    const bar = document.getElementById('readBar');
-    if (bar) bar.style.width = '0%';
-  };
+      words.forEach((wi, i) => {
+        _hlTimers.push(setTimeout(() => {
+          setHighlight(wi);
+          const pct = Math.round(((wi + 1) / wordCount) * 100);
+          if (bar) bar.style.width = pct + '%';
+          const pctEl = document.getElementById('readPct');
+          if (pctEl) pctEl.textContent = pct + '%';
+        }, i * msPerWord));
+      });
 
-  u.onend = () => {
-    document.querySelectorAll('.word-span.reading').forEach(el => el.classList.remove('reading'));
-    const bar   = document.getElementById('readBar');
-    const pctEl = document.getElementById('readPct');
-    if (bar)   bar.style.width = '100%';
-    if (pctEl) pctEl.textContent = '100% ✅';
-    setTimeout(() => {
-      const wrap = document.getElementById('readProgressWrap');
-      if (wrap) wrap.style.display = 'none';
+      await window.Capacitor.Plugins.TextToSpeech.speak({
+        text: text,
+        lang: 'en-US',
+        rate: rate,
+        volume: vol,
+        category: 'ambient'
+      });
+
+      // When done
+      onSpeechEnd();
+    } catch(e) {
+      console.error('Plugin TTS Error:', e);
       resetAudio();
-      renderArticle(); injectTooltips(); // restore normal vocab highlights
-    }, 1200);
-  };
+    }
+  } else {
+    // Web Speech API mode
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang   = 'en-US';
+    u.rate   = rate;
+    u.volume = vol;
 
-  u.onerror = () => {
-    resetAudio();
-    renderArticle();
-  };
+    let _boundaryFired = false;
+    u.onboundary = (e) => {
+      if (e.name !== 'word') return;
+      _boundaryFired = true;
+      const wi = charMap[e.charIndex];
+      if (wi !== undefined) {
+        setHighlight(wi);
+        const pct = Math.round(((wi + 1) / wordCount) * 100);
+        if (bar) bar.style.width = pct + '%';
+        const pctEl = document.getElementById('readPct');
+        if (pctEl) pctEl.textContent = pct + '%';
+      }
+    };
 
-  window.speechSynthesis.speak(u);
+    _hlTimers.push(setTimeout(() => {
+      if (_boundaryFired) return;
+      const words = Object.values(charMap).sort((a,b)=>a-b);
+      const totalMs = (text.split(/\s+/).length / rate) * 60 * 1000 / 150;
+      const msPerWord = totalMs / (words.length || 1);
+      words.forEach((wi, i) => {
+        _hlTimers.push(setTimeout(() => {
+          setHighlight(wi);
+          const pct = Math.round(((wi + 1) / wordCount) * 100);
+          if (bar) bar.style.width = pct + '%';
+          const pctEl = document.getElementById('readPct');
+          if (pctEl) pctEl.textContent = pct + '%';
+        }, i * msPerWord));
+      });
+    }, 800));
+
+    u.onend = onSpeechEnd;
+    u.onerror = () => { resetAudio(); renderArticle(); };
+    tts.speak(u);
+  }
 }
 
-function stopSpeak() {
-  window.speechSynthesis.cancel();
-  clearTimeout(_hlTimer);
+function onSpeechEnd() {
+  document.querySelectorAll('.word-span.reading').forEach(el => el.classList.remove('reading'));
+  const bar   = document.getElementById('readBar');
+  const pctEl = document.getElementById('readPct');
+  if (bar)   bar.style.width = '100%';
+  if (pctEl) pctEl.textContent = '100% ✅';
+  setTimeout(() => {
+    const wrap = document.getElementById('readProgressWrap');
+    if (wrap) wrap.style.display = 'none';
+    resetAudio();
+    renderArticle(); injectTooltips();
+  }, 1200);
+}
+
+async function stopSpeak() {
+  try {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.TextToSpeech) {
+      await window.Capacitor.Plugins.TextToSpeech.stop();
+    }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  } catch(e) {}
+
+  _hlTimers.forEach(t => clearTimeout(t));
+  _hlTimers = [];
   document.querySelectorAll('.word-span.reading').forEach(el => el.classList.remove('reading'));
   const wrap = document.getElementById('readProgressWrap');
   if (wrap) wrap.style.display='none';
@@ -2917,7 +3054,338 @@ document.getElementById('vol').addEventListener('input', function() {
 // ═══════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// I18N — MULTI-LANGUAGE SUPPORT
+// ═══════════════════════════════════════════════════════
+const STRINGS = {
+  'zh-TW':{
+    subtitle:'台灣108課綱 · 1,200篇英文文章 · 快樂學習！',
+    select_grade:'選擇年級',select_sem:'選擇學期',
+    grade1:'一年級',grade1sub:'啟蒙 ~10字',
+    grade2:'二年級',grade2sub:'啟蒙 ~20字',
+    grade3:'三年級',grade3sub:'正式 ~40字',
+    grade4:'四年級',grade4sub:'中年 ~60字',
+    grade5:'五年級',grade5sub:'高年 ~80字',
+    grade6:'六年級',grade6sub:'高年 ~100字',
+    sem1:'🌸 上學期',sem2:'🌻 下學期',
+    start:'✨ 開始學習！',
+    streak_days:'天',menu_home:'回主頁繼續學習',
+    menu_progress:'學習進度紀錄',menu_reset:'重新選擇年級學期',
+    menu_clear:'清除所有紀錄',select_article:'選文章',
+    vocab_title:'📝 本課核心單字（點擊聽發音）',
+    read_progress:'跟讀進度',btn_read:'▶️ 跟讀',btn_slow:'🐢 慢速',
+    btn_stop:'⏹ 停止',volume:'音量',
+    btn_done:'✅ 完成這篇，繼續下一篇！',
+    streak_label:'連續學習天數',best_streak:'最高紀錄：{n} 天',
+    stat_articles:'完成篇數',stat_days:'學習天數',
+    stat_lessons:'完成課次',stat_grade:'目前年級',
+    cal_title:'本月學習日曆',history_title:'📋 最近完成記錄',
+    no_history:t('no_history'),
+    clear_confirm:'確定要清除所有學習紀錄嗎？',cleared:'已清除所有紀錄',
+    first_article:'已經是第一篇了 📖',last_article:'已經是最後一篇了 🎉！',
+    done_toast:'✅ 完成！🔥 連勝 {n} 天！',
+    no_tts:'此裝置不支援語音',tts_failed:'語音播放失敗',
+    no_tts2:'此裝置不支援語音功能',
+    article_num:'第 {cur} 篇 / 共 {total} 篇',word_count:'{n} 個英文字',
+    sem_f:'上',sem_s:'下',grade_names:['','一','二','三','四','五','六'],
+    top_grade:'{g}年級{s}學期',history_grade:'{g}年{s}',
+    cancel:'取消',confirm:'確定',playing:'播放中',
+    lang_name:'繁體中文',flag:'🇹🇼'
+  },
+  'zh-CN':{
+    subtitle:'英语学习 · 1,200篇英文文章 · 快乐学习！',
+    select_grade:'选择年级',select_sem:'选择学期',
+    grade1:'一年级',grade1sub:'启蒙 ~10字',
+    grade2:'二年级',grade2sub:'启蒙 ~20字',
+    grade3:'三年级',grade3sub:'初级 ~40字',
+    grade4:'四年级',grade4sub:'中级 ~60字',
+    grade5:'五年级',grade5sub:'高级 ~80字',
+    grade6:'六年级',grade6sub:'高级 ~100字',
+    sem1:'🌸 上学期',sem2:'🌻 下学期',
+    start:'✨ 开始学习！',
+    streak_days:'天',menu_home:'回主页继续学习',
+    menu_progress:'学习进度记录',menu_reset:'重新选择年级学期',
+    menu_clear:'清除所有记录',select_article:'选文章',
+    vocab_title:'📝 本课核心单词（点击听发音）',
+    read_progress:'跟读进度',btn_read:'▶️ 跟读',btn_slow:'🐢 慢速',
+    btn_stop:'⏹ 停止',volume:'音量',
+    btn_done:'✅ 完成这篇，继续下一篇！',
+    streak_label:'连续学习天数',best_streak:'最高纪录：{n} 天',
+    stat_articles:'完成篇数',stat_days:'学习天数',
+    stat_lessons:'完成课次',stat_grade:'目前年级',
+    cal_title:'本月学习日历',history_title:'📋 最近完成记录',
+    no_history:'还没有完成记录，快去学习吧！🚀',
+    clear_confirm:'确定要清除所有学习记录吗？',cleared:'已清除所有记录',
+    first_article:'已经是第一篇了 📖',last_article:'已经是最后一篇了 🎉！',
+    done_toast:'✅ 完成！🔥 连胜 {n} 天！',
+    no_tts:'此设备不支持语音',tts_failed:'语音播放失败',
+    no_tts2:'此设备不支持语音功能',
+    article_num:'第 {cur} 篇 / 共 {total} 篇',word_count:'{n} 个英文字',
+    sem_f:'上',sem_s:'下',grade_names:['','一','二','三','四','五','六'],
+    top_grade:'{g}年级{s}学期',history_grade:'{g}年{s}',
+    cancel:'取消',confirm:'确定',playing:'播放中',
+    lang_name:'简体中文',flag:'🇨🇳'
+  },
+  'en':{
+    subtitle:'1,200 English Articles · Fun Learning for All Ages!',
+    select_grade:'Select Level',select_sem:'Select Semester',
+    grade1:'Grade 1',grade1sub:'Beginner ~10 words',
+    grade2:'Grade 2',grade2sub:'Beginner ~20 words',
+    grade3:'Grade 3',grade3sub:'Elementary ~40 words',
+    grade4:'Grade 4',grade4sub:'Intermediate ~60 words',
+    grade5:'Grade 5',grade5sub:'Advanced ~80 words',
+    grade6:'Grade 6',grade6sub:'Advanced ~100 words',
+    sem1:'🌸 Semester 1',sem2:'🌻 Semester 2',
+    start:'✨ Start Learning!',
+    streak_days:' days',menu_home:'Continue Learning',
+    menu_progress:'Progress Records',menu_reset:'Change Level',
+    menu_clear:'Clear All Records',select_article:'Article',
+    vocab_title:'📝 Key Vocabulary (tap to hear)',
+    read_progress:'Reading Progress',btn_read:'▶️ Read Aloud',btn_slow:'🐢 Slow',
+    btn_stop:'⏹ Stop',volume:'Volume',
+    btn_done:'✅ Done! Next Article →',
+    streak_label:'Day Streak',best_streak:'Best: {n} days',
+    stat_articles:'Articles Done',stat_days:'Days Studied',
+    stat_lessons:'Lessons Done',stat_grade:'Current Level',
+    cal_title:'Monthly Calendar',history_title:'📋 Recent Activity',
+    no_history:'No records yet — start learning! 🚀',
+    clear_confirm:'Clear all learning records?',cleared:'All records cleared',
+    first_article:'This is the first article 📖',
+    last_article:'Last article — great job 🎉!',
+    done_toast:'✅ Done! 🔥 {n}-day streak!',
+    no_tts:'Text-to-speech not supported',tts_failed:'Audio playback failed',
+    no_tts2:'Speech not supported on this device',
+    article_num:'Article {cur} of {total}',word_count:'{n} words',
+    sem_f:'S1',sem_s:'S2',grade_names:['','G1','G2','G3','G4','G5','G6'],
+    top_grade:'Grade {g} · Sem {s}',history_grade:'G{g}S{s}',
+    cancel:'Cancel',confirm:'OK',playing:'Playing',
+    lang_name:'English',flag:'🇺🇸'
+  },
+  'ja':{
+    subtitle:'1,200本の英語記事 · 楽しく英語を学ぼう！',
+    select_grade:'学年を選択',select_sem:'学期を選択',
+    grade1:'1年生',grade1sub:'入門 ~10語',
+    grade2:'2年生',grade2sub:'入門 ~20語',
+    grade3:'3年生',grade3sub:'初級 ~40語',
+    grade4:'4年生',grade4sub:'中級 ~60語',
+    grade5:'5年生',grade5sub:'中上級 ~80語',
+    grade6:'6年生',grade6sub:'中上級 ~100語',
+    sem1:'🌸 前期',sem2:'🌻 後期',
+    start:'✨ 学習スタート！',
+    streak_days:'日',menu_home:'ホームに戻る',
+    menu_progress:'学習記録',menu_reset:'学年・学期を変更',
+    menu_clear:'記録をすべて削除',select_article:'記事',
+    vocab_title:'📝 重要単語（タップで発音）',
+    read_progress:'音読進度',btn_read:'▶️ 音読',btn_slow:'🐢 ゆっくり',
+    btn_stop:'⏹ 停止',volume:'音量',
+    btn_done:'✅ 完了！次の記事へ →',
+    streak_label:'連続学習日数',best_streak:'最高記録：{n}日',
+    stat_articles:'完了記事数',stat_days:'学習日数',
+    stat_lessons:'完了レッスン',stat_grade:'現在の学年',
+    cal_title:'今月の学習カレンダー',history_title:'📋 最近の学習',
+    no_history:'まだ記録がありません。学習を始めよう！🚀',
+    clear_confirm:'学習記録をすべて削除しますか？',cleared:'記録を削除しました',
+    first_article:'最初の記事です 📖',last_article:'最後の記事です 🎉！',
+    done_toast:'✅ 完了！🔥 {n}日連続！',
+    no_tts:'音声合成に非対応',tts_failed:'音声再生失敗',
+    no_tts2:'この端末は音声に非対応',
+    article_num:'記事 {cur} / {total}',word_count:'{n}語',
+    sem_f:'前',sem_s:'後',grade_names:['','1年','2年','3年','4年','5年','6年'],
+    top_grade:'{g}生 {s}期',history_grade:'{g}{s}',
+    cancel:'キャンセル',confirm:'OK',playing:'再生中',
+    lang_name:'日本語',flag:'🇯🇵'
+  },
+  'ko':{
+    subtitle:'1,200개 영어 기사 · 즐겁게 영어 배우기!',
+    select_grade:'학년 선택',select_sem:'학기 선택',
+    grade1:'1학년',grade1sub:'초급 ~10단어',
+    grade2:'2학년',grade2sub:'초급 ~20단어',
+    grade3:'3학년',grade3sub:'초중급 ~40단어',
+    grade4:'4학년',grade4sub:'중급 ~60단어',
+    grade5:'5학년',grade5sub:'중상급 ~80단어',
+    grade6:'6학년',grade6sub:'중상급 ~100단어',
+    sem1:'🌸 1학기',sem2:'🌻 2학기',
+    start:'✨ 학습 시작!',
+    streak_days:'일',menu_home:'홈으로 돌아가기',
+    menu_progress:'학습 기록',menu_reset:'학년/학기 변경',
+    menu_clear:'모든 기록 삭제',select_article:'기사',
+    vocab_title:'📝 핵심 단어 (탭하여 듣기)',
+    read_progress:'읽기 진도',btn_read:'▶️ 소리내어 읽기',btn_slow:'🐢 천천히',
+    btn_stop:'⏹ 정지',volume:'볼륨',
+    btn_done:'✅ 완료! 다음 기사 →',
+    streak_label:'연속 학습일',best_streak:'최고 기록: {n}일',
+    stat_articles:'완료 기사',stat_days:'학습 일수',
+    stat_lessons:'완료 수업',stat_grade:'현재 학년',
+    cal_title:'이번 달 학습 캘린더',history_title:'📋 최근 학습',
+    no_history:'아직 기록이 없습니다. 학습을 시작하세요! 🚀',
+    clear_confirm:'모든 학습 기록을 삭제할까요?',cleared:'모든 기록이 삭제되었습니다',
+    first_article:'첫 번째 기사입니다 📖',last_article:'마지막 기사입니다 🎉!',
+    done_toast:'✅ 완료! 🔥 {n}일 연속!',
+    no_tts:'음성 합성 미지원',tts_failed:'오디오 재생 실패',
+    no_tts2:'이 기기는 음성을 지원하지 않습니다',
+    article_num:'기사 {cur} / {total}',word_count:'{n}단어',
+    sem_f:'1',sem_s:'2',grade_names:['','1','2','3','4','5','6'],
+    top_grade:'{g}학년 {s}학기',history_grade:'{g}학년{s}학기',
+    cancel:'취소',confirm:'확인',playing:'재생 중',
+    lang_name:'한국어',flag:'🇰🇷'
+  },
+  'vi':{
+    subtitle:'1,200 bài tiếng Anh · Học tiếng Anh vui vẻ!',
+    select_grade:'Chọn lớp',select_sem:'Chọn học kỳ',
+    grade1:'Lớp 1',grade1sub:'Cơ bản ~10 từ',
+    grade2:'Lớp 2',grade2sub:'Cơ bản ~20 từ',
+    grade3:'Lớp 3',grade3sub:'Sơ cấp ~40 từ',
+    grade4:'Lớp 4',grade4sub:'Trung cấp ~60 từ',
+    grade5:'Lớp 5',grade5sub:'Nâng cao ~80 từ',
+    grade6:'Lớp 6',grade6sub:'Nâng cao ~100 từ',
+    sem1:'🌸 Học kỳ 1',sem2:'🌻 Học kỳ 2',
+    start:'✨ Bắt đầu học!',
+    streak_days:' ngày',menu_home:'Tiếp tục học',
+    menu_progress:'Tiến độ học tập',menu_reset:'Đổi lớp/học kỳ',
+    menu_clear:'Xóa tất cả',select_article:'Bài đọc',
+    vocab_title:'📝 Từ vựng chính (nhấn để nghe)',
+    read_progress:'Tiến độ đọc',btn_read:'▶️ Đọc to',btn_slow:'🐢 Chậm',
+    btn_stop:'⏹ Dừng',volume:'Âm lượng',
+    btn_done:'✅ Xong! Bài tiếp theo →',
+    streak_label:'Chuỗi ngày học',best_streak:'Cao nhất: {n} ngày',
+    stat_articles:'Bài đã xong',stat_days:'Ngày học',
+    stat_lessons:'Bài học xong',stat_grade:'Lớp hiện tại',
+    cal_title:'Lịch học tháng này',history_title:'📋 Lịch sử gần đây',
+    no_history:'Chưa có bài nào. Bắt đầu học ngay! 🚀',
+    clear_confirm:'Xóa tất cả tiến độ học?',cleared:'Đã xóa tất cả',
+    first_article:'Đây là bài đầu tiên 📖',last_article:'Đây là bài cuối 🎉!',
+    done_toast:'✅ Xong! 🔥 {n} ngày liên tiếp!',
+    no_tts:'Thiết bị không hỗ trợ TTS',tts_failed:'Không phát được âm thanh',
+    no_tts2:'Thiết bị không hỗ trợ giọng nói',
+    article_num:'Bài {cur} / {total}',word_count:'{n} từ',
+    sem_f:'1',sem_s:'2',grade_names:['','L1','L2','L3','L4','L5','L6'],
+    top_grade:'Lớp {g} · HK{s}',history_grade:'L{g}HK{s}',
+    cancel:'Hủy',confirm:'OK',playing:'Đang phát',
+    lang_name:'Tiếng Việt',flag:'🇻🇳'
+  },
+  'es':{
+    subtitle:'1,200 artículos en inglés · ¡Aprende inglés con diversión!',
+    select_grade:'Seleccionar nivel',select_sem:'Seleccionar semestre',
+    grade1:'Grado 1',grade1sub:'Principiante ~10 palabras',
+    grade2:'Grado 2',grade2sub:'Principiante ~20 palabras',
+    grade3:'Grado 3',grade3sub:'Elemental ~40 palabras',
+    grade4:'Grado 4',grade4sub:'Intermedio ~60 palabras',
+    grade5:'Grado 5',grade5sub:'Avanzado ~80 palabras',
+    grade6:'Grado 6',grade6sub:'Avanzado ~100 palabras',
+    sem1:'🌸 Semestre 1',sem2:'🌻 Semestre 2',
+    start:'✨ ¡Empezar!',
+    streak_days:' días',menu_home:'Continuar aprendiendo',
+    menu_progress:'Progreso',menu_reset:'Cambiar nivel',
+    menu_clear:'Borrar registros',select_article:'Artículo',
+    vocab_title:'📝 Vocabulario clave (toca para escuchar)',
+    read_progress:'Progreso de lectura',btn_read:'▶️ Leer en voz alta',btn_slow:'🐢 Lento',
+    btn_stop:'⏹ Parar',volume:'Volumen',
+    btn_done:'✅ ¡Listo! Siguiente →',
+    streak_label:'Días consecutivos',best_streak:'Récord: {n} días',
+    stat_articles:'Artículos',stat_days:'Días estudiados',
+    stat_lessons:'Lecciones',stat_grade:'Nivel actual',
+    cal_title:'Calendario del mes',history_title:'📋 Actividad reciente',
+    no_history:'Sin registros. ¡Empieza a aprender! 🚀',
+    clear_confirm:'¿Borrar todos los registros?',cleared:'Registros borrados',
+    first_article:'Primer artículo 📖',last_article:'¡Último artículo 🎉!',
+    done_toast:'✅ ¡Listo! 🔥 ¡{n} días seguidos!',
+    no_tts:'TTS no compatible',tts_failed:'Error de audio',
+    no_tts2:'Voz no compatible en este dispositivo',
+    article_num:'Artículo {cur} de {total}',word_count:'{n} palabras',
+    sem_f:'1',sem_s:'2',grade_names:['','G1','G2','G3','G4','G5','G6'],
+    top_grade:'Grado {g} · Sem {s}',history_grade:'G{g}S{s}',
+    cancel:'Cancelar',confirm:'Aceptar',playing:'Reproduciendo',
+    lang_name:'Español',flag:'🇪🇸'
+  },
+  'th':{
+    subtitle:'บทความภาษาอังกฤษ 1,200 บท · เรียนภาษาอังกฤษอย่างสนุก!',
+    select_grade:'เลือกชั้นเรียน',select_sem:'เลือกภาคเรียน',
+    grade1:'ป.1',grade1sub:'เริ่มต้น ~10 คำ',
+    grade2:'ป.2',grade2sub:'เริ่มต้น ~20 คำ',
+    grade3:'ป.3',grade3sub:'ประถม ~40 คำ',
+    grade4:'ป.4',grade4sub:'กลาง ~60 คำ',
+    grade5:'ป.5',grade5sub:'สูง ~80 คำ',
+    grade6:'ป.6',grade6sub:'สูง ~100 คำ',
+    sem1:'🌸 ภาคเรียน 1',sem2:'🌻 ภาคเรียน 2',
+    start:'✨ เริ่มเรียน!',
+    streak_days:' วัน',menu_home:'เรียนต่อ',
+    menu_progress:'บันทึกความก้าวหน้า',menu_reset:'เปลี่ยนชั้น/ภาคเรียน',
+    menu_clear:'ลบข้อมูลทั้งหมด',select_article:'บทความ',
+    vocab_title:'📝 คำศัพท์สำคัญ (แตะเพื่อฟัง)',
+    read_progress:'ความก้าวหน้าการอ่าน',btn_read:'▶️ อ่านออกเสียง',btn_slow:'🐢 ช้า',
+    btn_stop:'⏹ หยุด',volume:'ระดับเสียง',
+    btn_done:'✅ เสร็จแล้ว! บทถัดไป →',
+    streak_label:'วันเรียนต่อเนื่อง',best_streak:'สถิติสูงสุด: {n} วัน',
+    stat_articles:'บทที่เสร็จ',stat_days:'วันที่เรียน',
+    stat_lessons:'บทเรียนที่เสร็จ',stat_grade:'ชั้นปัจจุบัน',
+    cal_title:'ปฏิทินการเรียนเดือนนี้',history_title:'📋 กิจกรรมล่าสุด',
+    no_history:'ยังไม่มีบันทึก เริ่มเรียนเลย! 🚀',
+    clear_confirm:'ลบข้อมูลการเรียนทั้งหมด?',cleared:'ลบข้อมูลทั้งหมดแล้ว',
+    first_article:'นี่คือบทแรก 📖',last_article:'บทสุดท้ายแล้ว 🎉!',
+    done_toast:'✅ เสร็จ! 🔥 เรียนต่อเนื่อง {n} วัน!',
+    no_tts:'ไม่รองรับการแปลงข้อความเป็นเสียง',tts_failed:'การเล่นเสียงล้มเหลว',
+    no_tts2:'อุปกรณ์นี้ไม่รองรับเสียง',
+    article_num:'บทที่ {cur} / {total}',word_count:'{n} คำ',
+    sem_f:'1',sem_s:'2',grade_names:['','ป1','ป2','ป3','ป4','ป5','ป6'],
+    top_grade:'ป.{g} ภาค{s}',history_grade:'ป{g}ภ{s}',
+    cancel:'ยกเลิก',confirm:'ตกลง',playing:'กำลังเล่น',
+    lang_name:'ภาษาไทย',flag:'🇹🇭'
+  }
+};
+
+let _lang = localStorage.getItem('appLang') || (navigator.language||'').startsWith('zh-TW') ? 'zh-TW'
+           : (navigator.language||'').startsWith('zh') ? 'zh-CN'
+           : (navigator.language||'').startsWith('ja') ? 'ja'
+           : (navigator.language||'').startsWith('ko') ? 'ko'
+           : (navigator.language||'').startsWith('vi') ? 'vi'
+           : (navigator.language||'').startsWith('th') ? 'th'
+           : (navigator.language||'').startsWith('es') ? 'es'
+           : 'zh-TW';
+if (!STRINGS[_lang]) _lang = 'zh-TW';
+
+function t(key, vars) {
+  const s = STRINGS[_lang] || STRINGS['zh-TW'];
+  let str = s[key] || STRINGS['zh-TW'][key] || key;
+  if (vars) Object.keys(vars).forEach(k => { str = str.replace('{'+k+'}', vars[k]); });
+  return str;
+}
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  const sd = document.getElementById('streakDaysLabel');
+  if (sd) sd.textContent = t('streak_days');
+}
+
+function setLang(lang) {
+  _lang = lang;
+  localStorage.setItem('appLang', lang);
+  applyI18n();
+  // re-render dynamic content
+  updateTopBar();
+  renderProgress && renderProgress();
+  if (state.grade && state.sem) renderArticle && renderArticle();
+  closeLangPicker();
+}
+
+function openLangPicker() {
+  const overlay = document.getElementById('langOverlay');
+  const list = document.getElementById('langList');
+  list.innerHTML = Object.entries(STRINGS).map(([code, s]) =>
+    `<div class="lang-opt${_lang===code?' active':''}" onclick="setLang('${code}')">
+       <span class="lang-flag">${s.flag}</span>
+       <span>${s.lang_name}</span>
+     </div>`
+  ).join('');
+  overlay.style.display = 'flex';
+}
+function closeLangPicker() {
+  document.getElementById('langOverlay').style.display = 'none';
+}
+
 function init() {
+  applyI18n();
   recordLogin();
   updateTopBar();
   
