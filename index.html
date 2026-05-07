@@ -646,17 +646,37 @@ function customConfirm(msg, cb) {
 
 // Touch tooltip: tap word to show/hide translation on touch devices
 let _tipVisible = null;
+
+function _loadLazyTip(ws) {
+  const tip = ws.querySelector('.word-tip[data-lazy]');
+  if (!tip) return;
+  const w = ws.getAttribute('data-word');
+  if (tip.dataset.loaded) return;
+  tip.dataset.loaded = '1';
+  tip.textContent = '...';
+  translateText(w, _lang).then(result => {
+    if (result) { tip.textContent = result; delete tip.dataset.lazy; }
+    else tip.remove();
+  });
+}
+
 document.addEventListener('touchstart', function(e) {
   const ws = e.target.closest('.word-span');
   if (ws) {
     e.preventDefault();
     if (_tipVisible && _tipVisible !== ws) _tipVisible.classList.remove('tip-show');
+    _loadLazyTip(ws);
     ws.classList.toggle('tip-show');
     _tipVisible = ws.classList.contains('tip-show') ? ws : null;
   } else {
     if (_tipVisible) { _tipVisible.classList.remove('tip-show'); _tipVisible = null; }
   }
 }, {passive: false});
+
+document.addEventListener('mouseover', function(e) {
+  const ws = e.target.closest('.word-span');
+  if (ws) _loadLazyTip(ws);
+});
 
 // ═══════════════════════════════════════════════════════
 // SETUP PAGE
@@ -819,13 +839,20 @@ function renderArticle() {
   
   document.getElementById('artEn').innerHTML = highlightWords(art.en, art.vocab || []);
   const zhEl = document.getElementById('artZh');
+  zhEl.style.display = '';
   if (_lang === 'zh-TW' || _lang === 'zh-CN') {
     zhEl.textContent = art.zh;
-    zhEl.style.display = '';
   } else {
-    zhEl.textContent = '';
-    zhEl.style.display = 'none';
+    const _artSnapshot = art;
+    const _langSnapshot = _lang;
+    zhEl.textContent = '⏳ ...';
+    translateText(art.en, _lang).then(result => {
+      if (_lang === _langSnapshot && art === _artSnapshot) {
+        zhEl.textContent = result || art.zh;
+      }
+    });
   }
+  document.querySelectorAll('.word-tip').forEach(t => t.remove());
   injectTooltips();
   renderVocab();
   updateNavBtns();
@@ -961,6 +988,23 @@ function renderHistory() {
 // HOVER TRANSLATION — 完整靜態字典（繁體中文）
 // ══════════════════════════════════════════════════════
 const _transCache = {};
+
+const _LANG_CODES = {'zh-TW':'zh-TW','zh-CN':'zh-CN','en':'en-US','ja':'ja','ko':'ko','vi':'vi','es':'es','th':'th'};
+
+async function translateText(text, targetLang) {
+  if (!text) return '';
+  const target = _LANG_CODES[targetLang] || 'zh-TW';
+  const cacheKey = target + ':' + text;
+  if (_transCache[cacheKey]) return _transCache[cacheKey];
+  try {
+    const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=en|' + target;
+    const res = await fetch(url);
+    const data = await res.json();
+    const result = data.responseData && data.responseData.translatedText ? data.responseData.translatedText : '';
+    if (result) _transCache[cacheKey] = result;
+    return result;
+  } catch(e) { return ''; }
+}
 
 const DICT = {
   "the":"這/那",
@@ -2811,15 +2855,24 @@ function getTranslation(word) {
 
 // ── Inject tooltip element on every word-span ──
 function injectTooltips() {
+  const isChinese = _lang === 'zh-TW' || _lang === 'zh-CN';
   document.querySelectorAll('.word-span[data-word]').forEach(el => {
-    if (el.querySelector('.word-tip')) return; // already done
+    if (el.querySelector('.word-tip')) return;
     const w = el.getAttribute('data-word');
-    const tr = getTranslation(w);
-    if (!tr) return; // no translation, show nothing
-    const tip = document.createElement('span');
-    tip.className = 'word-tip';
-    tip.textContent = tr;
-    el.appendChild(tip);
+    if (isChinese) {
+      const tr = getTranslation(w);
+      if (!tr) return;
+      const tip = document.createElement('span');
+      tip.className = 'word-tip';
+      tip.textContent = tr;
+      el.appendChild(tip);
+    } else {
+      // Lazy: translate only on first hover/tap
+      const tip = document.createElement('span');
+      tip.className = 'word-tip';
+      tip.dataset.lazy = '1';
+      el.appendChild(tip);
+    }
   });
 }
 
