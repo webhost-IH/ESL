@@ -859,32 +859,48 @@ function updateTopBar() {
 // DONE / PROGRESS
 // ═══════════════════════════════════════════════════════
 function markDone() {
-  const t = todayStr();
-  const art = getCurrentData()[state.articleIdx];
-  
-  // record completion
+  const today = todayStr();
+  const articles = getCurrentData();
+  const art = articles[state.articleIdx];
+
+  // Record completion
   state.completedArticles.push({
-    date: t,
+    date: today,
     grade: state.grade, sem: state.sem,
     lessonName: '',
     artIdx: state.articleIdx,
     title: art.title
   });
-  
-  // record login date for streak
-  if (!state.loginDates.includes(t)) {
-    state.loginDates.push(t);
+
+  // Record login date for streak
+  if (!state.loginDates.includes(today)) {
+    state.loginDates.push(today);
     state.currentStreak = calcStreak(state.loginDates);
     if (state.currentStreak > state.bestStreak) state.bestStreak = state.currentStreak;
   }
-  
+
   saveState(state);
   document.getElementById('streakCount').textContent = state.currentStreak;
-  const _sdl=document.getElementById('streakDaysLabel'); if(_sdl) _sdl.textContent=t('streak_days');
-  
-  // auto-advance
-  showToast(t('done_toast',{n:state.currentStreak}));
-  setTimeout(() => navigate(1), 400);
+  const _sdl = document.getElementById('streakDaysLabel');
+  if (_sdl) _sdl.textContent = t('streak_days');
+
+  // Navigate to next article
+  const nextIdx = state.articleIdx + 1;
+  if (nextIdx < articles.length) {
+    showToast(t('done_toast', {n: state.currentStreak}));
+    setTimeout(() => {
+      state.articleIdx = nextIdx;
+      saveState(state);
+      stopSpeak();
+      document.getElementById('articleSel').value = nextIdx;
+      renderArticle();
+      updateNavBtns();
+      try { window.scrollTo({top: 0, behavior: 'smooth'}); } catch(e) { window.scrollTo(0, 0); }
+    }, 400);
+  } else {
+    // Last article in this level — show congratulations
+    showToast(t('last_article'));
+  }
 }
 
 // ═══════════════════════════════════════════════════════
