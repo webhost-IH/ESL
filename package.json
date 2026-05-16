@@ -1,0 +1,23 @@
+{
+  "name": "english-learning-app",
+  "version": "1.0.0",
+  "description": "台灣108課綱英文學習App",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Static HTML - no build needed'",
+    "sync": "npx cap sync",
+    "open:ios": "npx cap open ios",
+    "open:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^7.2.0",
+    "@capacitor-community/text-to-speech": "^5.0.0",
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@revenuecat/purchases-capacitor": "^13.1.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}
